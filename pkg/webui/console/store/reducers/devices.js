@@ -33,6 +33,7 @@ const defaultState = {
 
 const heartbeatEvents = ['ns.up.data.receive', 'ns.up.join.receive', 'ns.up.rejoin.receive']
 const uplinkFrameCountEvent = 'ns.up.data.process'
+const downlinkFrameCountEvent = 'ns.down.data.schedule.attempt'
 
 const mergeDerived = (state, id, derived) =>
   Object.keys(derived).length > 0
@@ -118,11 +119,14 @@ const devices = function(state = defaultState, { type, payload, event }) {
         }
       }
 
-      // Detect uplink process event to update uplink frame count state.
+      // Detect uplink/downlink process events to update uplink/downlink frame count state.
       else if (event.name === uplinkFrameCountEvent) {
-        const id = getCombinedDeviceId(event.identifiers[0].device_ids)
-        return mergeDerived(state, id, {
+        return mergeDerived(state, getCombinedDeviceId(event.identifiers[0].device_ids), {
           uplinkFrameCount: getByPath(event, 'data.payload.mac_payload.full_f_cnt'),
+        })
+      } else if (event.name === downlinkFrameCountEvent) {
+        return mergeDerived(state, getCombinedDeviceId(event.identifiers[0].device_ids), {
+          downlinkFrameCount: getByPath(event, 'data.payload.mac_payload.full_f_cnt'),
         })
       }
       return state
