@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - To encrypt the secrets set `is.gateways.encryption-key-id`.
 - Storage Integration API.
 - CLI support for Storage Integration (see `ttn-lw-cli end-devices storage` and `ttn-lw-cli applications storage` commands).
+- Limitation of displayed and stored events in the Console to 2000.
 
 ### Changed
 
@@ -49,9 +50,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Gateway ID usage in upstream connection.
 - Last seen counter for applications, end devices and gateways in the Console.
 - `Use credentials` option being always checked in Pub/Sub edit form in the Console.
+<<<<<<< HEAD
 - FPending being set on downlinks, when LinkADRReq is required, but all available TxPower and data rate index combinations are rejected by the device.
 - Coding rate for LoRa 2.4 GHz: it's now `4/8LI`.
 - End device import in the Console crashing in Firefox.
+=======
+- Further performance optimizations for event views in the Console.
+>>>>>>> ba6e2f4d7... dev: Update changelog
 
 ### Security
 
