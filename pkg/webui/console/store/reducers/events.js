@@ -35,30 +35,46 @@ import {
   createClearEventsActionType,
 } from '@console/store/actions/events'
 
-const addEvent = (events, event) => {
-  // See https://github.com/TheThingsNetwork/lorawan-stack/pull/2989
-  if (event.name === 'events.stream.start' || event.name === 'events.stream.stop') {
-    return events
+const appendEventsSorted = (currentEvents, newEvents) => {
+  if (currentEvents.length === 0 || newEvents[newEvents.length - 1].time >= currentEvents[0].time) {
+    return newEvents.concat(currentEvents)
   }
 
-  const currentEvents = events
+  const items = currentEvents.slice()
+  for (let i = newEvents.length - 1; i >= 0; i--) {
+    if (newEvents[i].time >= items[0].time) {
+      return newEvents.slice(0, i + 1).concat(items)
+    }
+    let j = 1
+    while (newEvents[i] < items[j]) {
+      j++
+    }
+    items.splice(j, 0, newEvents[i])
+  }
+}
 
-  // Keep events sorted in descending order by `time`.
-  let insertIndex = 0
-  while (insertIndex < currentEvents.length) {
-    const currentEventTime = currentEvents[insertIndex].time
+const addEvents = (state, events) => {
+  const newEvents = appendEventsSorted(state.events, events)
 
-    if (event.time < currentEventTime) {
-      insertIndex += 1
-    } else {
-      break
+  if (newEvents.length > EVENT_STORE_LIMIT) {
+    return {
+      events: newEvents.slice(0, EVENT_STORE_LIMIT),
+      truncated: true,
     }
   }
 
-  return [...currentEvents.slice(0, insertIndex), event, ...currentEvents.slice(insertIndex)]
+  return {
+    ...state,
+    events: newEvents,
+    truncated: false,
+  }
 }
+
+const addEvent = (state, event) => addEvents(state, [event])
+
 const defaultState = {
   events: [],
+  truncated: false,
   error: undefined,
   interrupted: false,
   status: CONNECTION_STATUS.DISCONNECTED,
