@@ -196,6 +196,7 @@ export default class GatewayGeneralSettings extends React.Component {
         <Row>
           <Col lg={8} md={12}>
             <GatewayDataForm
+              collapse
               error={error}
               onSubmit={this.handleSubmit}
               initialValues={initialValues}

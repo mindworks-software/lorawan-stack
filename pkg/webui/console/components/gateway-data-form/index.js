@@ -14,7 +14,6 @@
 
 import React from 'react'
 import bind from 'autobind-decorator'
-import { defineMessages } from 'react-intl'
 
 import delay from '@console/constants/delays'
 
@@ -24,95 +23,26 @@ import Checkbox from '@ttn-lw/components/checkbox'
 import SubmitBar from '@ttn-lw/components/submit-bar'
 import UnitInput from '@ttn-lw/components/unit-input'
 import KeyValueMap from '@ttn-lw/components/key-value-map'
+import Collapse from '@ttn-lw/components/collapse'
 
 import Message from '@ttn-lw/lib/components/message'
 
 import { GsFrequencyPlansSelect } from '@console/containers/freq-plans-select'
 import OwnersSelect from '@console/containers/owners-select'
 
-import Yup from '@ttn-lw/lib/yup'
 import PropTypes from '@ttn-lw/lib/prop-types'
 import sharedMessages from '@ttn-lw/lib/shared-messages'
 
-import { attributeValidCheck, attributeTooShortCheck } from '@console/lib/attributes'
-import {
-  id as gatewayIdRegexp,
-  address as addressRegexp,
-  unit as unitRegexp,
-  emptyDuration as emptyDurationRegexp,
-  delay as delayRegexp,
-} from '@console/lib/regexp'
+import { unit as unitRegexp, emptyDuration as emptyDurationRegexp } from '@console/lib/regexp'
 
-const m = defineMessages({
-  enforced: 'Enforced',
-  dutyCycle: 'Duty cycle',
-  gatewayIdPlaceholder: 'my-new-gateway',
-  gatewayNamePlaceholder: 'My new gateway',
-  gsServerAddressDescription: 'The address of the Gateway Server to connect to',
-  gatewayDescPlaceholder: 'Description for my new gateway',
-  gatewayDescDescription:
-    'Optional gateway description; can also be used to save notes about the gateway',
-  statusDescription: 'The status of this gateway may be publicly displayed',
-  scheduleDownlinkLateDescription: 'Enable server-side buffer of downlink messages',
-  autoUpdateDescription: 'Gateway can be updated automatically',
-  updateChannelDescription: 'Channel for gateway automatic updates',
-  enforceDutyCycleDescription:
-    'Recommended for all gateways in order to respect spectrum regulations',
-  scheduleAnyTimeDelay: 'Schedule any time delay',
-  scheduleAnyTimeDescription:
-    'Configure gateway delay (minimum: {minimumValue}ms, default: {defaultValue}ms)',
-  delayWarning:
-    'Delay too short. The lower bound ({minimumValue}ms) will be used by the Gateway Server.',
-})
-
-const validationSchema = Yup.object().shape({
-  owner_id: Yup.string(),
-  ids: Yup.object().shape({
-    gateway_id: Yup.string()
-      .matches(gatewayIdRegexp, Yup.passValues(sharedMessages.validateIdFormat))
-      .min(2, Yup.passValues(sharedMessages.validateTooShort))
-      .max(36, Yup.passValues(sharedMessages.validateTooLong))
-      .required(sharedMessages.validateRequired),
-    eui: Yup.nullableString().length(8 * 2, Yup.passValues(sharedMessages.validateLength)),
-  }),
-  name: Yup.string()
-    .min(2, Yup.passValues(sharedMessages.validateTooShort))
-    .max(50, Yup.passValues(sharedMessages.validateTooLong)),
-  update_channel: Yup.string()
-    .min(2, Yup.passValues(sharedMessages.validateTooShort))
-    .max(50, Yup.passValues(sharedMessages.validateTooLong)),
-  description: Yup.string().max(2000, Yup.passValues(sharedMessages.validateTooLong)),
-  frequency_plan_id: Yup.string(),
-  gateway_server_address: Yup.string().matches(
-    addressRegexp,
-    Yup.passValues(sharedMessages.validateAddressFormat),
-  ),
-  location_public: Yup.boolean().default(false),
-  status_public: Yup.boolean().default(false),
-  schedule_downlink_late: Yup.boolean().default(false),
-  update_location_from_status: Yup.boolean().default(false),
-  auto_update: Yup.boolean().default(false),
-  schedule_anytime_delay: Yup.string().matches(
-    delayRegexp,
-    Yup.passValues(sharedMessages.validateDelayFormat),
-  ),
-  attributes: Yup.array()
-    .test(
-      'has no empty string values',
-      sharedMessages.attributesValidateRequired,
-      attributeValidCheck,
-    )
-    .test(
-      'has key length longer than 2',
-      sharedMessages.attributeKeyValidateTooShort,
-      attributeTooShortCheck,
-    ),
-})
+import m from './messages'
+import validationSchema from './validation-schema'
 
 class GatewayDataForm extends React.Component {
   static propTypes = {
     /** The SubmitBar content. */
     children: PropTypes.node.isRequired,
+    collapse: PropTypes.bool,
     error: PropTypes.error,
     /** React reference to be passed to the form. */
     formRef: PropTypes.shape({}),
@@ -122,6 +52,7 @@ class GatewayDataForm extends React.Component {
   }
 
   static defaultProps = {
+    collapse: false,
     formRef: undefined,
     update: false,
     error: '',
@@ -179,7 +110,7 @@ class GatewayDataForm extends React.Component {
   }
 
   render() {
-    const { update, error, initialValues, formRef, children } = this.props
+    const { update, error, initialValues, formRef, children, collapse } = this.props
     const { shouldDisplayWarning } = this.state
 
     return (
@@ -190,120 +121,133 @@ class GatewayDataForm extends React.Component {
         validationSchema={validationSchema}
         formikRef={formRef}
       >
-        <Message component="h4" content={sharedMessages.generalSettings} />
-        {!update && <OwnersSelect name="owner_id" required autoFocus />}
-        <Form.Field
-          title={sharedMessages.gatewayID}
-          name="ids.gateway_id"
-          placeholder={m.gatewayIdPlaceholder}
-          required
-          disabled={update}
-          component={Input}
-        />
-        <Form.Field
-          title={sharedMessages.gatewayEUI}
-          name="ids.eui"
-          type="byte"
-          min={8}
-          max={8}
-          placeholder={sharedMessages.gatewayEUI}
-          component={Input}
-        />
-        <Form.Field
-          title={sharedMessages.gatewayName}
-          placeholder={m.gatewayNamePlaceholder}
-          name="name"
-          component={Input}
-        />
-        <Form.Field
-          title={sharedMessages.gatewayDescription}
-          description={m.gatewayDescDescription}
-          placeholder={m.gatewayDescPlaceholder}
-          name="description"
-          type="textarea"
-          component={Input}
-        />
-        <Form.Field
-          title={sharedMessages.gatewayServerAddress}
-          description={m.gsServerAddressDescription}
-          placeholder={sharedMessages.addressPlaceholder}
-          name="gateway_server_address"
-          component={Input}
-        />
-        <Form.Field
-          title={sharedMessages.gatewayStatus}
-          name="status_public"
-          component={Checkbox}
-          label={sharedMessages.public}
-          description={m.statusDescription}
-        />
-        <Form.Field
-          name="attributes"
-          title={sharedMessages.attributes}
-          keyPlaceholder={sharedMessages.key}
-          valuePlaceholder={sharedMessages.value}
-          addMessage={sharedMessages.addAttributes}
-          component={KeyValueMap}
-          description={sharedMessages.attributeDescription}
-        />
-        <Message component="h4" content={sharedMessages.lorawanOptions} />
-        <GsFrequencyPlansSelect name="frequency_plan_id" menuPlacement="top" />
-        <Form.Field
-          title={sharedMessages.gatewayScheduleDownlinkLate}
-          name="schedule_downlink_late"
-          component={Checkbox}
-          description={m.scheduleDownlinkLateDescription}
-        />
-        <Form.Field
-          title={m.dutyCycle}
-          name="enforce_duty_cycle"
-          component={Checkbox}
-          label={m.enforced}
-          description={m.enforceDutyCycleDescription}
-        />
-        <Form.Field
-          title={m.scheduleAnyTimeDelay}
-          name="schedule_anytime_delay"
-          component={UnitInput}
-          description={{
-            ...m.scheduleAnyTimeDescription,
-            values: {
-              minimumValue: delay.MINIMUM_GATEWAY_SCHEDULE_ANYTIME_DELAY,
-              defaultValue: delay.DEFAULT_GATEWAY_SCHEDULE_ANYTIME_DELAY,
-            },
-          }}
-          units={[
-            { label: sharedMessages.milliseconds, value: 'ms' },
-            { label: sharedMessages.seconds, value: 's' },
-            { label: sharedMessages.minutes, value: 'm' },
-            { label: sharedMessages.hours, value: 'h' },
-          ]}
-          onChange={this.onScheduleAnytimeDelayChange}
-          warning={
-            shouldDisplayWarning
-              ? {
-                  ...m.delayWarning,
-                  values: { minimumValue: delay.MINIMUM_GATEWAY_SCHEDULE_ANYTIME_DELAY },
-                }
-              : undefined
-          }
-          required
-        />
-        <Message component="h4" content={sharedMessages.gatewayUpdateOptions} />
-        <Form.Field
-          title={sharedMessages.automaticUpdates}
-          name="auto_update"
-          component={Checkbox}
-          description={m.autoUpdateDescription}
-        />
-        <Form.Field
-          title={sharedMessages.channel}
-          description={m.updateChannelDescription}
-          placeholder={sharedMessages.stable}
-          name="update_channel"
-          component={Input}
-          autoComplete="on"
-        />
+        <Collapse
+          title={m.basicTitle}
+          description={m.basicDescription}
+          disabled={false}
+          initialCollapsed={false}
+        >
+          <Message component="h4" content={sharedMessages.generalSettings} />
+          {!update && <OwnersSelect name="owner_id" required autoFocus />}
+          <Form.Field
+            title={sharedMessages.gatewayID}
+            name="ids.gateway_id"
+            placeholder={m.gatewayIdPlaceholder}
+            required
+            disabled={update}
+            component={Input}
+          />
+          <Form.Field
+            title={sharedMessages.gatewayEUI}
+            name="ids.eui"
+            type="byte"
+            min={8}
+            max={8}
+            placeholder={sharedMessages.gatewayEUI}
+            component={Input}
+          />
+          <Form.Field
+            title={sharedMessages.gatewayName}
+            placeholder={m.gatewayNamePlaceholder}
+            name="name"
+            component={Input}
+          />
+          <Form.Field
+            title={sharedMessages.gatewayDescription}
+            description={m.gatewayDescDescription}
+            placeholder={m.gatewayDescPlaceholder}
+            name="description"
+            type="textarea"
+            component={Input}
+          />
+          <Form.Field
+            title={sharedMessages.gatewayServerAddress}
+            description={m.gsServerAddressDescription}
+            placeholder={sharedMessages.addressPlaceholder}
+            name="gateway_server_address"
+            component={Input}
+          />
+          <Form.Field
+            title={sharedMessages.gatewayStatus}
+            name="status_public"
+            component={Checkbox}
+            label={sharedMessages.public}
+            description={m.statusDescription}
+          />
+          <Form.Field
+            name="attributes"
+            title={sharedMessages.attributes}
+            keyPlaceholder={sharedMessages.key}
+            valuePlaceholder={sharedMessages.value}
+            addMessage={sharedMessages.addAttributes}
+            component={KeyValueMap}
+            description={sharedMessages.attributeDescription}
+          />
+          <Message component="h4" content={sharedMessages.gatewayUpdateOptions} />
+          <Form.Field
+            title={sharedMessages.automaticUpdates}
+            name="auto_update"
+            component={Checkbox}
+            description={m.autoUpdateDescription}
+          />
+          <Form.Field
+            title={sharedMessages.channel}
+            description={m.updateChannelDescription}
+            placeholder={sharedMessages.stable}
+            name="update_channel"
+            component={Input}
+            autoComplete="on"
+          />
+        </Collapse>
+        <Collapse
+          title={m.lorawanTitle}
+          description={m.lorawanDescription}
+          disabled={false}
+          initialCollapsed={collapse}
+        >
+          <GsFrequencyPlansSelect name="frequency_plan_id" menuPlacement="top" />
+          <Form.Field
+            title={sharedMessages.gatewayScheduleDownlinkLate}
+            name="schedule_downlink_late"
+            component={Checkbox}
+            description={m.scheduleDownlinkLateDescription}
+          />
+          <Form.Field
+            title={m.dutyCycle}
+            name="enforce_duty_cycle"
+            component={Checkbox}
+            label={m.enforced}
+            description={m.enforceDutyCycleDescription}
+          />
+          <Form.Field
+            title={m.scheduleAnyTimeDelay}
+            name="schedule_anytime_delay"
+            component={UnitInput}
+            description={{
+              ...m.scheduleAnyTimeDescription,
+              values: {
+                minimumValue: delay.MINIMUM_GATEWAY_SCHEDULE_ANYTIME_DELAY,
+                defaultValue: delay.DEFAULT_GATEWAY_SCHEDULE_ANYTIME_DELAY,
+              },
+            }}
+            units={[
+              { label: sharedMessages.milliseconds, value: 'ms' },
+              { label: sharedMessages.seconds, value: 's' },
+              { label: sharedMessages.minutes, value: 'm' },
+              { label: sharedMessages.hours, value: 'h' },
+            ]}
+            onChange={this.onScheduleAnytimeDelayChange}
+            warning={
+              shouldDisplayWarning
+                ? {
+                    ...m.delayWarning,
+                    values: { minimumValue: delay.MINIMUM_GATEWAY_SCHEDULE_ANYTIME_DELAY },
+                  }
+                : undefined
+            }
+            required
+          />
+        </Collapse>
         <SubmitBar>{children}</SubmitBar>
       </Form>
     )
