@@ -171,6 +171,20 @@ Cypress.Commands.add('augmentStackConfig', fns => {
   })
 })
 
+Cypress.Commands.add('createGateway', (gateway, userId) => {
+  const baseUrl = Cypress.config('baseUrl')
+  cy.getAccessToken(accessToken => {
+    cy.request({
+      method: 'POST',
+      url: `${baseUrl}/api/v3/users/${userId}/gateways`,
+      body: { gateway },
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    })
+  })
+})
+
 // Selectors.
 
 const getFieldDescriptorByLabel = label => {
