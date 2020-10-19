@@ -20,9 +20,11 @@ import renderCallback from '../../lib/render-callback'
 
 import { WizardContext } from './context'
 
+const FIRST_STEP = 1
+
+// Action types.
 const INIT = 'INIT'
 const GO_TO_STEP = 'GO_TO_STEP'
-const SET_SNAPSHOT = 'SET_SNAPSHOT'
 
 const reducer = (state, action) => {
   switch (action.type) {
@@ -32,14 +34,19 @@ const reducer = (state, action) => {
         steps: action.steps,
       }
     case GO_TO_STEP:
+      const { snapshots: oldSnapshots, currentStep: oldStep } = state
+      const { values, step: currentStep } = action
+
+      const snapshots = [
+        ...oldSnapshots.slice(0, oldStep - 1),
+        values,
+        ...oldSnapshots.slice(oldStep),
+      ]
+
       return {
         ...state,
-        currentStep: action.step,
-      }
-    case SET_SNAPSHOT:
-      return {
-        ...state,
-        snapshot: merge({}, state.snapshot, action.snapshot),
+        currentStep,
+        snapshots,
       }
     default:
       return state
@@ -52,10 +59,10 @@ const Wizard = props => {
   const [state, dispatch] = React.useReducer(reducer, {
     currentStep: initialStep,
     steps: [],
-    snapshot: initialValues,
+    snapshots: [],
   })
 
-  const { currentStep, steps, snapshot } = state
+  const { currentStep, steps, snapshots } = state
 
   const stepsCount = steps.length
 
@@ -63,19 +70,18 @@ const Wizard = props => {
     dispatch({ type: INIT, steps })
   }, [])
   const prevStep = React.useCallback(
-    values => {
-      dispatch({ type: SET_SNAPSHOT, snapshot: values })
-      dispatch({ type: GO_TO_STEP, step: Math.min(currentStep - 1, stepsCount) })
-    },
-    [currentStep, stepsCount],
+    values => dispatch({ type: GO_TO_STEP, step: Math.max(currentStep - 1, FIRST_STEP), values }),
+    [currentStep],
   )
   const nextStep = React.useCallback(
-    values => {
-      dispatch({ type: SET_SNAPSHOT, snapshot: values })
-      dispatch({ type: GO_TO_STEP, step: Math.min(currentStep + 1, stepsCount) })
-    },
+    values => dispatch({ type: GO_TO_STEP, step: Math.min(currentStep + 1, stepsCount), values }),
     [currentStep, stepsCount],
   )
+
+  const snapshot = React.useMemo(() => merge({}, initialValues, ...snapshots), [
+    initialValues,
+    snapshots,
+  ])
 
   const context = {
     completeMessage,
